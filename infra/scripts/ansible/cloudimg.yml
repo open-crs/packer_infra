@@ -1,0 +1,113 @@
+- name: Provision image
+  hosts: default
+  become: true
+
+  vars:
+    home_dir: "/home/{{ ansible_user }}"
+    img_dir: "{{ home_dir }}/work"
+    libvirt_networks_dir: "/usr/share/libvirt/networks"
+    libvirt_network_name: labvms
+    libvirt_user: "{{ 'libvirt-qemu' if ansible_os_family == 'Debian' else 'qemu' }}"
+
+  tasks:
+    - import_tasks: _common.yml
+
+    - name: Update apt repositories (if using a Debian-based OS)
+      command:
+        cmd: apt update
+      when: ansible_os_family == "Debian"
+
+    - name: Install packages required for virtualization
+      package:
+        name:
+          - qemu
+          - qemu-kvm
+          - bridge-utils
+        state: latest
+
+    - name: Install libvirt (RedHat based OS)
+      package:
+        name:
+          - libvirt
+          - virt-install
+          - virt-top
+          - virt-viewer
+        state: latest
+      when: ansible_os_family == "RedHat"
+
+    - name: Install libvirt (Debian based OS)
+      package:
+        name:
+          - virtinst
+          - libvirt-clients
+          - virt-top
+          - virt-viewer
+          - libvirt-daemon-system
+        state: latest
+      when: ansible_os_family == "Debian"
+
+    - name: Create libvirt networks template directory if it does not exist
+      file:
+        path: "{{ libvirt_networks_dir }}"
+        state: directory
+        mode: 0755
+        owner: root
+        group: root
+
+    - name: Create lab VMs libvirt network template
+      copy:
+        content: |
+          <network>
+            <name>{{ libvirt_network_name }}</name>
+            <bridge name='virbr-labs'/>
+            <mtu size="1450"/>
+            <forward/>
+            <ip address='192.168.100.254' netmask='255.255.255.0'>
+              <dhcp>
+                <range start='192.168.100.1' end='192.168.100.253'/>
+              </dhcp>
+            </ip>
+          </network>
+        dest: "{{ libvirt_networks_dir }}/{{ libvirt_network_name }}.xml"
+        mode: 0644
+        owner: root
+        group: root
+
+    - name: Enable libvirt services
+      service:
+        name: "libvirtd"
+        enabled: yes
+
+    - name: Create disk image directory in the user's home
+      file:
+        path: "{{ img_dir }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: 0750
+
+    - name: Copy base disk images to the "work" directory
+      copy:
+        src: "{{ item }}"
+        dest: "{{ img_dir }}/{{ item | basename }}"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: 0640
+      with_items: "{{ include_disks | from_json }}"
+
+    - name: Give {{ libvirt_user }} permissions to access the disk image directory
+      acl:
+        path: "{{ item.path }}"
+        entity: "{{ libvirt_user }}"
+        etype: user
+        permissions: "{{ item.perms }}"
+        state: present
+        default: "{{ item.default }}"
+        recursive: "{{ item.recursive }}"
+      with_items:
+        - { path: "{{ home_dir }}", perms: X,  default: no,  recursive: no }
+        - { path: "{{ img_dir  }}", perms: rX, default: no,  recursive: yes }
+        - { path: "{{ img_dir  }}", perms: rX, default: yes, recursive: yes }
+
+    - import_tasks: _cloud_init.yml
+    - import_tasks: _disk_clean.yml

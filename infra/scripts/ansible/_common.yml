@@ -1,0 +1,23 @@
+- include_vars: _common_vars.yml
+- import_tasks: _hostname.yml
+
+- name: Set resolv.conf file
+  copy:
+    content: "nameserver 1.1.1.1"
+    dest: /etc/resolv.conf
+
+- name: Give the user sudo without password privileges
+  lineinfile:
+    path: /etc/sudoers
+    regexp: '#?\s*{{ ansible_user }}'
+    line: "{{ ansible_user }}\tALL=(ALL)\tNOPASSWD: ALL"
+    state: present
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Set restrictive permissions on the user's home
+  file:
+    path: "{{ home_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: 0700

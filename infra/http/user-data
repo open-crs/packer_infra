@@ -1,34 +1,33 @@
 #cloud-config
 autoinstall:
   version: 1
-  locale: en_US.UTF-8
+  locale: en_US
   keyboard:
     layout: us
-    variant: ''
-  language: en_US
-  identity:
-    hostname: ubuntu-server
-    username: vagrant
-    password: $6$rounds=4096$8dkK1P/$96UW7Qc7r4QzKqhSDlBqD7YGEkkjwCr1LqkJYBl.FqT8mXNmAU6VRhRqH9PCvnQxRi5r7tMOX5tQEmnfu7BUp. # vagrant
-  storage:
-    layout:
-      name: direct
-  ssh:
-    install-server: true
-    allow-pw: true
-    authorized-keys: []
   network:
     network:
       version: 2
       ethernets:
-        enp0s3:
+        ens3:
           dhcp4: true
+  storage:
+    layout:
+      name: direct
+  identity:
+    hostname: ubuntu-opencrs
+    username: opencrs
+    password: "$6$rounds=4096$saltsaltsal$VFGqLXYUnmKgCo9fJjWNQ9/6nBZs7rEwJvCCFR8QqgCWN0c9VwP3BvFxGsNrK.Svy5uL5xLJSFPtBhBGVNQvx0"
+  ssh:
+    install-server: true
+    allow-pw: true
   packages:
-    - openssh-server
     - build-essential
-    - virtualbox-guest-additions-iso
+    - curl
+    - wget
+    - vim
+    - git
   user-data:
     disable_root: false
   late-commands:
-    - echo 'vagrant ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/vagrant
-    - chmod 440 /target/etc/sudoers.d/vagrant
+    - echo 'opencrs ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/opencrs
+    - curtin in-target --target=/target -- chmod 440 /etc/sudoers.d/opencrs

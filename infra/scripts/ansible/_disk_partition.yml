@@ -1,0 +1,11 @@
+- name: Format disk {{ disk.name }}
+  parted:
+    device: "/dev/{{ disk.name }}"
+    number: "{{ part_index + 1 }}"
+    part_start: "{{ part.start }}"
+    part_end: "{{ part.end }}"
+    state: present
+  loop_control:
+    index_var: part_index
+    loop_var: part
+  with_items: "{{ disk.parts }}"

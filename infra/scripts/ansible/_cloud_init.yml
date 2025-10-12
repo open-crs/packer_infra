@@ -1,0 +1,56 @@
+- name: Install cloud-init
+  package:
+    name: cloud-init
+    state: latest
+
+- name: Make sure cloud-init is enabled
+  service:
+    name: cloud-init
+    enabled: yes
+
+- name: Find host SSH keys
+  find:
+    paths: /etc/ssh
+    patterns: "ssh_host*"
+  register: ssh_keys
+
+- name: Remove host SSH keys
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items:
+    - "{{ ssh_keys['files'] }}"
+
+# Inspired by https://stackoverflow.com/a/67379573
+- name: Read cloud config file
+  slurp:
+    path: /etc/cloud/cloud.cfg
+  register: cloud_cfg
+
+- name: Update and write back the cloud config file
+  copy:
+    content: "{{ cloud_cfg['content'] | b64decode | from_yaml | combine(cloudinit_config, recursive=True) | to_nice_yaml }}"
+    dest: /etc/cloud/cloud.cfg
+  vars:
+    cloudinit_default_config:
+      manage_etc_hosts: localhost
+      system_info:
+        default_user:
+          name: "{{ ansible_user }}"
+          gecos: "{{ ansible_user }}"
+    cloudinit_config: "{{ cloudinit_default_config | combine(cloudinit_custom_config | default({}), recursive=True) }}"
+
+- name: Set fact to keep cloud-init configuration files
+  set_fact:
+    keep_cloudconf: true
+
+- name: Create .Xauthority files in user's and root's home
+  copy:
+    content: ""
+    dest: "{{ item.path }}"
+    mode: 0640
+    owner: "{{ item.owner }}"
+    group: "{{ item.owner }}"
+  with_items:
+    - { owner: "{{ ansible_user }}", path: "/home/{{ ansible_user }}/.Xauthority" }
+    - { owner: root,                 path: "/root/.Xauthority" }
