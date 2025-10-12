@@ -90,7 +90,7 @@ source "qemu" "ubuntu2404" {
   disk_detect_zeroes  = var.disk_detect_zeroes
   format              = var.disk_format
   http_content        = {
-    "/user-data" = templatefile("scripts/autoinst/ubuntu-24-04-autoinstall.yml", {
+    "/user-data" = templatefile("scripts/autoinst/ubuntu-22-04-autoinstall.yml", {
       user = {
         username = var.username
         password = bcrypt(var.password)
