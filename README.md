@@ -9,3 +9,6 @@ Installation of virtualbox and [packer](https://developer.hashicorp.com/packer/t
 cd infra
 packer build -force ubuntu.pkr.hcl
 ```
+
+## Not usable
+The configuration is not usable at the moment due to an error related to cloud init. While building the VM packer fails when using ubuntu cloud init.
