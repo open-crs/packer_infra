@@ -19,3 +19,6 @@ qemu-system-x86_64 \
   -name ubuntu-20-04
 
 ```
+
+## Not usable
+The build fails due to a qemu virtualization problem related to system dependencies.
